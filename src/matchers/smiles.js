@@ -1,53 +1,61 @@
 const axios = require('axios')
 const cheerio = require('cheerio')
+const google = require('./google')
+const { URL } = require('url')
+
+const apiKey = 'AIzaSyCtzhDvhB27_vR9qDEK3OHxCDS_8_ajz-U'
+const engineId = '012289445205605909699:cgmi_tl1d6u'
 
 const vendors = {
-  extra: 'extra',
-  casasBahia: 'casasbahia',
-  pontoFrio: 'pontofrio',
-  fastShop: 'fastshop'
+  extra: '3',
+  casasBahia: '7',
+  pontoFrio: '4',
+  fastShop: '35'
 }
 
 const validateVendor = offer =>
   vendors[offer.vendor] ? Promise.resolve(offer) : Promise.reject()
 
 const search = (offer) => {
-  const options = {
-    method: 'get',
-    url: 'https://www.shoppingsmiles.com.br/smiles/super_busca.jsf',
-    params: {
-      a: false,
-      b: offer.description,
-      f: vendors[offer.vendor]
-    }
-  }
-  
-  return axios(options)
-    .then(response => response.data )
-    .then(cheerio.load)
+  return google(offer)
+    .then(response => response.items[0].link)
+    .then(link => {
+      const productUrl = new URL(link)
+      
+      let p = productUrl.searchParams.get('p').split('_')
+      p = p.slice(0, p.length - 1)
+      p = [...p, vendors[offer.vendor]].join('_')
+      
+      productUrl.searchParams.set('p', p)
+      productUrl.searchParams.set('f', vendors[offer.vendor])
+      productUrl.searchParams.set('a', false)
+
+      return axios({
+        url: productUrl.toString()
+      })
+        .then(response => response.data)
+        .then(cheerio.load)
+        .then($ => ({ $, link: productUrl.toString() }))
+    })
 }
 
-const parse = $ => {
-  return $('span.itens-section a')
-    .map(function () {
-      return {
-        name: $(this).find('span.item-name').text(),
-        pointsPrice: parseFloat($(this).find('span.item-main-pricing').text().replace(".","")),
-        pointsPriceFrom: parseFloat($(this).find('span.block-from-price-value').text().replace(".",""))
-      }
-    }).toArray()
+const parse = ({ $, link }) => {
+  return Promise.resolve({
+    name: $('#produto\\:formProduto\\:produtoNome').text().trim(),
+    pointsPrice: parseFloat($('span.smiles-pontos:first-child').text()),
+    pointsPriceFrom: parseFloat($('td.pagamento-left span.produto-reference-price strike').text()),
+    link
+  })
 }
 
-const evaluate = results => {
-  return Promise.resolve(results[0] || null)
-}
+const matched = ({ vendor }, product) =>
+  ({ program: 'smiles', vendor, ...product })
 
 const smilesMatcher = offer =>
   validateVendor(offer)
     .then(search)
     .then(parse)
-    .then(evaluate)
-    .then(product => ({ program: 'smiles', vendor: offer.vendor, ...product }))
+    .then(product => matched(offer, product))
     .catch(e => ({ program: 'smiles', vendor: offer.vendor }))
 
 module.exports = smilesMatcher
