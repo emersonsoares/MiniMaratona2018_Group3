@@ -1,10 +1,13 @@
 const axios = require('axios')
 const cheerio = require('cheerio')
-const google = require('./google')
+const numeral = require('numeral')
+const { google } = require('../searchEngines')
 const { URL } = require('url')
 
-const apiKey = 'AIzaSyCtzhDvhB27_vR9qDEK3OHxCDS_8_ajz-U'
-const engineId = '012289445205605909699:cgmi_tl1d6u'
+const gOpts = {
+  apiKey: 'AIzaSyCtzhDvhB27_vR9qDEK3OHxCDS_8_ajz-U',
+  engineId: '012289445205605909699:cgmi_tl1d6u'
+}
 
 const vendors = {
   extra: '3',
@@ -17,7 +20,7 @@ const validateVendor = offer =>
   vendors[offer.vendor] ? Promise.resolve(offer) : Promise.reject()
 
 const search = (offer) => {
-  return google(offer)
+  return google(gOpts)(offer)
     .then(response => response.items[0].link)
     .then(link => {
       const productUrl = new URL(link)
@@ -42,8 +45,8 @@ const search = (offer) => {
 const parse = ({ $, link }) => {
   return Promise.resolve({
     name: $('#produto\\:formProduto\\:produtoNome').text().trim(),
-    pointsPrice: parseFloat($('span.smiles-pontos:first-child').text()),
-    pointsPriceFrom: parseFloat($('td.pagamento-left span.produto-reference-price strike').text()),
+    pointsPrice: numeral($('span.box-pagamento-left span.smiles-pontos:first-child').text().replace('.', ',')).value(),
+    pointsPriceFrom: numeral($('td.pagamento-left span.produto-reference-price strike').text().replace('.', ',')).value(),
     link
   })
 }

@@ -1,15 +1,16 @@
 {
-  "name": "src",
+  "name": "product-matcher",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "compare": "node index.js compare"
+    "test": "nyc mocha",
+    "test:watch": "mocha --watch --recursive ./test",
+    "compare": "node ./src/index.js compare"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "dependencies": {
     "axios": "^0.18.0",
     "bootstrap": "^4.1.1",
@@ -20,7 +21,14 @@
     "exceljs": "^1.4.10",
     "express-generator": "^4.16.0",
     "jquery": "^3.3.1",
+    "numeral": "^2.0.6",
     "request": "^2.87.0",
     "request-promise": "^4.2.2"
+  },
+  "devDependencies": {
+    "axios-mock-adapter": "^1.15.0",
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "nyc": "^12.0.2"
   }
 }
